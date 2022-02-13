@@ -10,6 +10,7 @@
       "includePath": [
         "${workspaceFolder}/extern/includes/libil2cpp/il2cpp/libil2cpp", 
         "${workspaceFolder}/extern/includes/codegen/include", 
+        "${workspaceFolder}/extern/includes/beatsaber-hook/shared/utils", 
         "${workspaceFolder}/extern/includes", 
         "${workspaceFolder}/include", 
         "${workspaceFolder}/shared", 

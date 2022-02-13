@@ -1,5 +1,6 @@
 #include "UI/ViewControllers/SettingsViewController.hpp"
 
+#include "Breaktime/BreaktimeDummy.hpp"
 #include "GlobalNamespace/ColorChangeUIEventType.hpp"
 #include "UnityEngine/GameObject.hpp"
 #include "questui/shared/BeatSaberUI.hpp"
@@ -7,6 +8,7 @@
 
 DEFINE_TYPE(Breaktime::UI, SettingsViewController);
 
+using namespace Breaktime;
 using namespace QuestUI;
 using namespace QuestUI::BeatSaberUI;
 using namespace UnityEngine;
@@ -29,6 +31,14 @@ namespace Breaktime::UI {
             BeatSaberUI::CreateIncrementSetting(container->get_transform(), "Image Opacity", 1, 0.1f, 
             getPluginConfig().ImageOpacity.GetValue(), true, true, 0.0f, 1.0f, {0, 0}, 
             [](float f){ getPluginConfig().ImageOpacity.SetValue(f); });
+            
+            BeatSaberUI::CreateIncrementSetting(container->get_transform(), "Image ScaleX", 1, 0.1f, 
+            getPluginConfig().ImageOpacity.GetValue(), true, false, 0.0f, 1.0f, {0, 0}, 
+            [](float f){ getPluginConfig().ScaleX.SetValue(f); });
+            
+            BeatSaberUI::CreateIncrementSetting(container->get_transform(), "Image ScaleY", 1, 0.1f, 
+            getPluginConfig().ImageOpacity.GetValue(), true, false, 0.0f, 1.0f, {0, 0}, 
+            [](float f){ getPluginConfig().ScaleY.SetValue(f); });
 
             BeatSaberUI::CreateToggle(container->get_transform(), "Mod Enabled", getPluginConfig().Enabled.GetValue(), 
             [](bool b){ getPluginConfig().Enabled.SetValue(b); });
@@ -45,7 +55,10 @@ namespace Breaktime::UI {
             BeatSaberUI::CreateColorPicker(container->get_transform(), "Text Color", getPluginConfig().TextColor.GetValue(), 
             [](Color color, GlobalNamespace::ColorChangeUIEventType){ getPluginConfig().TextColor.SetValue(color); });
 
-            Button* testButton = BeatSaberUI::CreateUIButton(container->get_transform(), "TEST", "PlayButton", [](){});
+            Button* testButton = BeatSaberUI::CreateUIButton(container->get_transform(), "TEST", "PlayButton", [](){
+                BreaktimeDummy* dummy = new BreaktimeDummy();
+                dummy->SpawnDummy();
+            });
         }
     }
 }

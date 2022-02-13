@@ -1,5 +1,9 @@
 #include "Breaktime/BreaktimeModule.hpp"
 
+#include "GlobalNamespace/PlayerDataModel.hpp"
+#include "GlobalNamespace/PlayerData.hpp"
+#include "GlobalNamespace/PlayerSpecificSettings.hpp"
+
 #include "UnityEngine/AudioType.hpp"
 #include "UnityEngine/Networking/DownloadHandlerAudioClip.hpp"
 #include "UnityEngine/Networking/UnityWebRequest.hpp"
@@ -92,9 +96,9 @@ namespace Breaktime {
 
     Helpers::Coroutine BreaktimeModule::UpdateText(float endPoint){
         while (breakHappening){
-            timeText = string_format("%.1f", ((endPoint - audioController->songTime) / audioController->timeScale));
+            timeText = string_format("%.2f", ((endPoint - audioController->songTime) / audioController->timeScale));
             text->set_text(il2cpp_utils::newcsstr(timeText));
-            co_yield reinterpret_cast<System::Collections::IEnumerator*>(WaitForSeconds::New_ctor(0.05f));
+            co_yield reinterpret_cast<System::Collections::IEnumerator*>(WaitForSeconds::New_ctor(0.075f));
         }
         co_return;
     } 
@@ -108,13 +112,16 @@ namespace Breaktime {
             sprite->get_texture()->set_wrapMode(TextureWrapMode::Clamp);
             image->set_sprite(sprite);
         }
-        if (audio && getPluginConfig().SoundEnabled.GetValue())
+        if (audio && getPluginConfig().SoundEnabled.GetValue() && screen->get_active())
         {
             audioSource->PlayOneShot(audio);
         }
     }
 
-    void BreaktimeModule::CreateScreen(){
+    void BreaktimeModule::CreateScreen()
+    {
+        GameObject* comboPanel = GameObject::Find(il2cpp_utils::createcsstr("ComboPanel"));
+
         if (!screen)
         {
             screen = BeatSaberUI::CreateFloatingScreen({75, 75}, {0, 1.5f, 6}, Quaternion::get_identity().get_eulerAngles(), 0, false, false, 4);
@@ -127,17 +134,25 @@ namespace Breaktime {
         {
             UI::VerticalLayoutGroup* vertical = BeatSaberUI::CreateVerticalLayoutGroup(screen->get_transform());
             vertical->set_childAlignment(TextAnchor::MiddleCenter);
-            image = BeatSaberUI::CreateImage(vertical->get_transform(), 
-                BeatSaberUI::FileToSprite(getPluginConfig().ImagePath.GetValue()),
+
+            Sprite* sprite = BeatSaberUI::FileToSprite(getPluginConfig().ImagePath.GetValue());
+
+            image = BeatSaberUI::CreateImage(vertical->get_transform(), sprite,
                 {0, 0}, {0.0f, 0.0f});
             
             UI::LayoutElement* elem = image->GetComponent<UI::LayoutElement*>();
-            elem->set_preferredHeight(50.0f);
-            elem->set_preferredWidth(60.0f);
+            elem->set_preferredHeight(50.0f * getPluginConfig().ScaleY.GetValue());
+            elem->set_preferredWidth(60.0f * getPluginConfig().ScaleX.GetValue());
 
             text = BeatSaberUI::CreateText(vertical->get_transform(), timeText, false);
             text->set_alignment(TMPro::TextAlignmentOptions::Center);
             text->set_fontSize(20);
+
+            if (comboPanel)
+            {
+                UnityEngine::Material* material = comboPanel->GetComponentInChildren<HMUI::ImageView*>()->get_material();
+                image->set_material(material);
+            }
 
             if (!getPluginConfig().ShowText.GetValue())
             {
@@ -149,6 +164,12 @@ namespace Breaktime {
             {
                 text->get_gameObject()->SetActive(true);
             }
+        }
+
+        auto settings = Object::FindObjectOfType<PlayerDataModel*>()->dyn__playerData()->get_playerSpecificSettings();
+
+        if (settings->get_noTextsAndHuds()){
+            screen->SetActive(false);
         }
     }
 

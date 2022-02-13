@@ -19,16 +19,17 @@
 using namespace Breaktime;
 
 GameObject* obj = nullptr;
-BreaktimeManager* manager = nullptr;
+std::shared_ptr<BreaktimeManager> manager;
 BreaktimeModule* breaktime = nullptr;
 IDifficultyBeatmap* map = nullptr;
 
 MAKE_HOOK_MATCH(NoteController_SendNoteWasCutEvent,
                 &NoteController::SendNoteWasCutEvent, void,
                 NoteController* self, ByRef<NoteCutInfo> noteCutInfo) {
-  if (!getPluginConfig().Enabled.GetValue())
-  
-  manager->NoteCut(self);
+  if (getPluginConfig().Enabled.GetValue()) {
+    assert(manager != nullptr);
+    manager->NoteCut(self);
+  }
   
   NoteController_SendNoteWasCutEvent(self, noteCutInfo);
 }
@@ -36,36 +37,50 @@ MAKE_HOOK_MATCH(NoteController_SendNoteWasCutEvent,
 MAKE_HOOK_MATCH(BeatmapObjectManager_HandleNoteControllerNoteWasMissed,
                 &BeatmapObjectManager::HandleNoteControllerNoteWasMissed, void,
                 BeatmapObjectManager* self, NoteController* noteController) {
-  if (!getPluginConfig().Enabled.GetValue()) return;
-
-  manager->NoteEnded(noteController);
+  if (getPluginConfig().Enabled.GetValue()) {
+    assert(manager);
+    manager->NoteEnded(noteController);
+  }
   
   BeatmapObjectManager_HandleNoteControllerNoteWasMissed(self, noteController);
 }
 
 MAKE_HOOK_MATCH(AudioTimeSyncController_StartSong, &AudioTimeSyncController::StartSong, void, AudioTimeSyncController* self, float startTimeOffset) {
   AudioTimeSyncController_StartSong(self, startTimeOffset);
-
+  
+  getLogger().info("SongStart");
   if (!getPluginConfig().Enabled.GetValue()) return;
-
-  Object::Destroy(obj);
-  Object::Destroy(breaktime);
 
   if (manager)
   {
-    manager->~BreaktimeManager();
+    manager.reset();
+    manager = nullptr;
+  }
+  getLogger().info("Destroyed Manager");
+
+  Object::Destroy(obj);
+  Object::Destroy(breaktime);
+  getLogger().info("Destroyed Objects");
+
+  if (map){
+    manager = std::make_shared<BreaktimeManager>(map);
+    getLogger().info("Created new Manager");
+    obj = GameObject::New_ctor(il2cpp_utils::newcsstr("Breaktime"));
+    getLogger().info("Created new Obj");
+    breaktime = obj->AddComponent<BreaktimeModule*>();
+    breaktime->ctor(manager.get(), self);
+    breaktime->Start();
+
+    Object::DontDestroyOnLoad(breaktime);
+    Object::DontDestroyOnLoad(obj);
+
+    getLogger().info("Created new Module");
+    
+    manager->Initialize();  
+    getLogger().info("Initialize Manager");
   }
 
-  manager = new BreaktimeManager(map);
-
-  obj = GameObject::New_ctor(il2cpp_utils::newcsstr("Breaktime"));
-  breaktime = obj->AddComponent<BreaktimeModule*>();
-  breaktime->ctor(manager, self);
-  breaktime->Start();
-  
-  manager->difficultyBeatmap = map;
-  manager->Initialize();
-  
+  getLogger().info("SongStart Finished");
 }
 
 MAKE_HOOK_MATCH(StandardLevelDetailView_RefreshContent, &StandardLevelDetailView::RefreshContent, void,
@@ -83,15 +98,15 @@ MAKE_HOOK_MATCH(StandardLevelDetailView_RefreshContent, &StandardLevelDetailView
 MAKE_HOOK_MATCH(MenuTransitionsHelper_RestartGame, 
                 &MenuTransitionsHelper::RestartGame,
                 void, MenuTransitionsHelper* self, System::Action_1<Zenject::DiContainer *> *finishCallback) {
-  if (!getPluginConfig().Enabled.GetValue()) return;
+  if (getPluginConfig().Enabled.GetValue()) {
+    if (manager)
+    {
+      manager.reset();
+      manager = nullptr;
+    }
 
-  if (manager)
-  {
-    manager->~BreaktimeManager();
+    map = nullptr;
   }
-
-  map = nullptr;
-
 
   MenuTransitionsHelper_RestartGame(self, finishCallback);
 }

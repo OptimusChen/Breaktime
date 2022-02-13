@@ -1,5 +1,6 @@
 #include "UI/ViewControllers/ImageSelectionViewController.hpp"
 
+#include "PluginConfig.hpp"
 #include "Utils/UIUtils.hpp"
 #include "Utils/FileUtils.hpp"
 #include "HMUI/Touchable.hpp"
@@ -8,6 +9,8 @@
 #include "UnityEngine/UI/HorizontalLayoutGroup.hpp"
 #include "GlobalNamespace/SharedCoroutineStarter.hpp"
 #include "questui/shared/CustomTypes/Components/Backgroundable.hpp"
+
+#include <map>
 
 DEFINE_TYPE(Breaktime::UI, ImageSelectionViewController);
 
@@ -24,6 +27,12 @@ using namespace QuestUI::BeatSaberUI;
         layout##identifier = identifier->get_gameObject()->AddComponent<LayoutElement*>();  \
     layout##identifier->set_preferredWidth(width);                                          \
     layout##identifier->set_preferredHeight(height)
+
+#define SetPreferredWidth(identifier, width)                                         \
+    auto layout##identifier = identifier->get_gameObject()->GetComponent<LayoutElement*>(); \
+    if (!layout##identifier)                                                                \
+        layout##identifier = identifier->get_gameObject()->AddComponent<LayoutElement*>();  \
+    layout##identifier->set_preferredWidth(width);                                          \
 
 #define StartCoroutine(method)                                               \
     GlobalNamespace::SharedCoroutineStarter::get_instance()->StartCoroutine( \
@@ -71,40 +80,77 @@ namespace Breaktime::UI {
     custom_types::Helpers::Coroutine ImageSelectionViewController::SetupListElements(Transform* list){
         std::vector<std::string> icons = FileUtils::getFiles(
             "/sdcard/ModData/com.beatgames.beatsaber/Mods/Breaktime/Icons/");
+        std::map<Button*, std::string>* buttons = new std::map<Button*, std::string>();
+        std::map<TextMeshProUGUI*, std::string>* texts = new std::map<TextMeshProUGUI*, std::string>();
+
         int i = 0;
         while (!(i == icons.size()))
         {
             i++;
             auto image = icons.at(i - 1);
+            std::string imagePath = "/" + std::string(image.c_str());
 
             HorizontalLayoutGroup* horizontal = CreateHorizontalLayoutGroup(list);            
-            horizontal->set_childControlWidth(false);
+            horizontal->set_childControlWidth(false);        
+            horizontal->set_childForceExpandWidth(false);
 
             LayoutElement* elem = horizontal->GetComponent<LayoutElement*>();
             elem->set_minHeight(10);
             elem->set_minWidth(20);
 
-            Sprite* sprite = FileToSprite(image.c_str());
+            Sprite* sprite = FileToSprite(imagePath);
             
-            CreateImage(elem->get_transform(), sprite,
+            auto preview = CreateImage(horizontal->get_transform(), sprite,
                 Vector2(0.0f, 0.0f), Vector2(10.0f, 2.0f));
 
-            CreateText(elem->get_transform(), 
-                FileUtils::GetFileName(image.c_str(), false), true);
+            std::string fileName = FileUtils::GetFileName(imagePath, false);
 
-            elem->set_minWidth(1.0f);
+            auto name = CreateText(horizontal->get_transform(), 
+                fileName, true);
 
-            auto select = CreateUIButton(horizontal->get_transform(), "", [](){ });
+            auto select = CreateUIButton(horizontal->get_transform(), "", [=](){ 
+                getPluginConfig().ImagePath.SetValue(imagePath);
+
+                for (std::pair<Button*, std::string> pair : *buttons){
+                    std::string path = pair.second;
+                    Button* button = pair.first;
+
+                    if (path.compare(std::string(imagePath)) == 0){
+                        button->set_interactable(false);
+                        BeatSaberUI::AddHoverHint(button->get_gameObject(), "Already Selected!");
+                    }else{
+                        button->set_interactable(true);
+                        BeatSaberUI::AddHoverHint(button->get_gameObject(), "");
+                    }
+                }
+
+                for (std::pair<TextMeshProUGUI*, std::string> pair : *texts){
+                    std::string path = pair.second;
+                    std::string file = FileUtils::GetFileName(path, false);
+                    TextMeshProUGUI* text = pair.first;
+
+                    if (path.compare(imagePath) == 0){
+                        text->SetText(il2cpp_utils::newcsstr("<i><color=\"green\">" + file + "</color></i>"));
+                    }else{
+                        text->SetText(il2cpp_utils::newcsstr("<i>" + file + "</i>"));
+                    }
+                }
+            });
+
             UIUtils::SkewButton(select, 0.0f);
 
-            auto selectText = CreateText(select->get_transform(), "<color=#88ff88>select</color>", false);
+            if (getPluginConfig().ImagePath.GetValue().compare(imagePath) == 0){
+                select->set_interactable(false);
+                BeatSaberUI::AddHoverHint(select->get_gameObject(), "Already Selected!");
+
+                name->SetText(il2cpp_utils::newcsstr("<i><color=\"green\">" + fileName + "</color></i>"));
+            }
+
+            auto selectText = CreateText(select->get_transform(), "<color=#88ff88>Select</color>", false);
             selectText->set_alignment(TextAlignmentOptions::Center);
 
-            auto del = CreateUIButton(horizontal->get_transform(), "", [](){ });
-            UIUtils::SkewButton(del, 0.0f);
-
-            auto delText = CreateText(del->get_transform(), "<color=#ff8888>delete</color>", false);
-            delText->set_alignment(TextAlignmentOptions::Center);
+            texts->insert({name, imagePath});
+            buttons->insert({select, imagePath});
 
             co_yield reinterpret_cast<System::Collections::IEnumerator*>(WaitForSeconds::New_ctor(0.1));
         }
