@@ -4,6 +4,10 @@
 #include "GlobalNamespace/PlayerData.hpp"
 #include "GlobalNamespace/PlayerSpecificSettings.hpp"
 
+#include "UnityEngine/Canvas.hpp"
+#include "UnityEngine/Rect.hpp"
+#include "UnityEngine/RenderTextureDescriptor.hpp"
+#include "UnityEngine/RenderTexture.hpp"
 #include "UnityEngine/AudioType.hpp"
 #include "UnityEngine/Networking/DownloadHandlerAudioClip.hpp"
 #include "UnityEngine/Networking/UnityWebRequest.hpp"
@@ -11,6 +15,7 @@
 #include "UnityEngine/Texture2D.hpp"
 #include "UnityEngine/WaitForSeconds.hpp"
 #include "UnityEngine/TextureWrapMode.hpp"
+#include "UnityEngine/DepthTextureMode.hpp"
 #include "questui/shared/QuestUI.hpp"
 #include "questui/shared/BeatSaberUI.hpp"
 #include "PluginConfig.hpp"
@@ -44,10 +49,9 @@ namespace Breaktime {
         if (www->get_isDone()) 
         {
             AudioClip* clip = UnityEngine::Networking::DownloadHandlerAudioClip::GetContent(www);
-            audioController->StartCoroutine(reinterpret_cast<System::Collections::IEnumerator*>(
-            Helpers::CoroutineHelper::New(HandleBreak(time, 
+            audioController->StartCoroutine(Helpers::CoroutineHelper::New(HandleBreak(time, 
             {BeatSaberUI::FileToSprite(getPluginConfig().ImagePath.GetValue()),
-            clip}))));
+            clip})));
             getLogger().info("Handling Break");
         }
         co_return;
@@ -60,15 +64,15 @@ namespace Breaktime {
             CreateScreen();
             getLogger().info("Created Screen");
             breakHappening = true;
-            auto endPoint = timeUnitlEnd + audioController->songTime;
+            auto endPoint = timeUnitlEnd + audioController->dyn__songTime();
             get_gameObject()->SetActive(true);
             screen->get_gameObject()->SetActive(true);
             SetupVisuals(assets);
             getLogger().info("Setup Visuals");
-            audioController->StartCoroutine(reinterpret_cast<System::Collections::IEnumerator*>(Helpers::CoroutineHelper::New(UpdateText(endPoint))));
+            audioController->StartCoroutine(Helpers::CoroutineHelper::New(UpdateText(endPoint)));
             ModifyVisuals();
             getLogger().info("Colored Icons");
-            while (!(audioController->songTime > endPoint - 2))
+            while (!(audioController->dyn__songTime() > endPoint - 2))
             {
                 co_yield nullptr;
             }
@@ -96,7 +100,7 @@ namespace Breaktime {
 
     Helpers::Coroutine BreaktimeModule::UpdateText(float endPoint){
         while (breakHappening){
-            timeText = string_format("%.2f", ((endPoint - audioController->songTime) / audioController->timeScale));
+            timeText = string_format("%.2f", ((endPoint - audioController->dyn__songTime()) / audioController->dyn__timeScale()));
             text->set_text(il2cpp_utils::newcsstr(timeText));
             co_yield reinterpret_cast<System::Collections::IEnumerator*>(WaitForSeconds::New_ctor(0.075f));
         }
@@ -120,7 +124,8 @@ namespace Breaktime {
 
     void BreaktimeModule::CreateScreen()
     {
-        GameObject* comboPanel = GameObject::Find(il2cpp_utils::createcsstr("ComboPanel"));
+        static ConstString ComboPanel = "ComboPanel";
+        GameObject* comboPanel = GameObject::Find(ComboPanel);
 
         if (!screen)
         {
@@ -139,20 +144,15 @@ namespace Breaktime {
 
             image = BeatSaberUI::CreateImage(vertical->get_transform(), sprite,
                 {0, 0}, {0.0f, 0.0f});
-            
-            UI::LayoutElement* elem = image->GetComponent<UI::LayoutElement*>();
-            elem->set_preferredHeight(50.0f * getPluginConfig().ScaleY.GetValue());
-            elem->set_preferredWidth(60.0f * getPluginConfig().ScaleX.GetValue());
 
-            text = BeatSaberUI::CreateText(vertical->get_transform(), timeText, false);
+            UI::LayoutElement* elem = image->GetComponent<UI::LayoutElement*>();
+            image->set_preserveAspect(true);
+            elem->set_preferredHeight(50.0f * getPluginConfig().ScaleY.GetValue());
+            elem->set_preferredWidth(70.0f * getPluginConfig().ScaleX.GetValue());
+
+            text = BeatSaberUI::CreateText(vertical->get_transform(), timeText, false, {0, 0});
             text->set_alignment(TMPro::TextAlignmentOptions::Center);
             text->set_fontSize(20);
-
-            if (comboPanel)
-            {
-                UnityEngine::Material* material = comboPanel->GetComponentInChildren<HMUI::ImageView*>()->get_material();
-                image->set_material(material);
-            }
 
             if (!getPluginConfig().ShowText.GetValue())
             {
@@ -181,7 +181,6 @@ namespace Breaktime {
     }
 
     void BreaktimeModule::BreakDetected(float timeForNextNote){
-        audioController->StartCoroutine(reinterpret_cast<System::Collections::IEnumerator*>
-        (Helpers::CoroutineHelper::New(StartBreak(timeForNextNote - audioController->songTime))));
+        audioController->StartCoroutine(Helpers::CoroutineHelper::New(StartBreak(timeForNextNote - audioController->dyn__songTime())));
     }
 }

@@ -35,22 +35,22 @@ namespace UIUtils {
 
         ImageView* imageView =
             background->get_gameObject()->GetComponentInChildren<ImageView*>();
-        imageView->gradient = true;
-        imageView->gradientDirection = 0;
+        imageView->dyn__gradient() = true;
+        imageView->dyn__gradientDirection() = 0;
         imageView->set_color(UnityEngine::Color::get_white());
         imageView->set_color0(UnityEngine::Color(0.0f,0.37f, 0.5f, 1));
         imageView->set_color1(UnityEngine::Color(0.0f,0.37f, 0.5f, 0));
-        imageView->curvedCanvasSettingsHelper->Reset();
+        imageView->dyn__curvedCanvasSettingsHelper()->Reset();
 
         return horizontal;
     }
 
     void SkewButton(Button* button, float skew){
-        ::Array<ImageView*>* images = button->GetComponentsInChildren<ImageView*>();
+        ArrayW<ImageView*> images = button->GetComponentsInChildren<ImageView*>();
         
-        for (int i = 0; i < images->get_Length(); i++){
-            ImageView* image = images->get(i);
-            image->skew = skew;
+        for (int i = 0; i < images.Length(); i++){
+            ImageView* image = images.get(i);
+            image->dyn__skew() = skew;
         }
     }
 }

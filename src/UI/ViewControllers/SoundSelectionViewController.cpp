@@ -35,10 +35,7 @@ using namespace QuestUI::BeatSaberUI;
         layout##identifier = identifier->get_gameObject()->AddComponent<LayoutElement*>();  \
     layout##identifier->set_preferredWidth(width);                                          \
 
-#define StartCoroutine(method)                                               \
-    GlobalNamespace::SharedCoroutineStarter::get_instance()->StartCoroutine( \
-        reinterpret_cast<System::Collections::IEnumerator*>(                 \
-            custom_types::Helpers::CoroutineHelper::New(method)))
+#define StartCoroutine(method) GlobalNamespace::SharedCoroutineStarter::get_instance()->StartCoroutine(custom_types::Helpers::CoroutineHelper::New(method))
 
 namespace Breaktime::UI {
 
@@ -52,7 +49,7 @@ namespace Breaktime::UI {
             GameObject* mainLayout = GameObject::New_ctor();
             RectTransform* parent = mainLayout->AddComponent<RectTransform*>();
             parent->SetParent(get_transform(), false);
-            parent->set_localPosition(UnityEngine::Vector3(38.0f, 0.0f));
+            parent->set_localPosition(Vector3(38.0f, 0.0f, 0.0f));
 
             HorizontalLayoutGroup* header = UIUtils::CreateHeader(get_transform());
 

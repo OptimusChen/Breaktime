@@ -15,10 +15,7 @@
 
 using namespace GlobalNamespace;
 
-#define StartCoroutine(method)                                               \
-    GlobalNamespace::SharedCoroutineStarter::get_instance()->StartCoroutine( \
-        reinterpret_cast<System::Collections::IEnumerator*>(                 \
-            custom_types::Helpers::CoroutineHelper::New(method)))
+#define StartCoroutine(method) GlobalNamespace::SharedCoroutineStarter::get_instance()->StartCoroutine(custom_types::Helpers::CoroutineHelper::New(method))
 
 namespace Breaktime {
 
@@ -81,13 +78,14 @@ namespace Breaktime {
 
         image = BeatSaberUI::CreateImage(vertical->get_transform(), sprite,
             {0, 0}, {0.0f, 0.0f});
+        image->set_preserveAspect(true);
         
         UI::LayoutElement* elem = image->GetComponent<UI::LayoutElement*>();
         elem->set_preferredHeight(50.0f * getPluginConfig().ScaleY.GetValue());
         elem->set_preferredWidth(60.0f * getPluginConfig().ScaleX.GetValue());
 
         text = BeatSaberUI::CreateText(vertical->get_transform(), "0.00", false);
-        text->set_alignment(TMPro::TextAlignmentOptions::Left);
+        text->set_alignment(TMPro::TextAlignmentOptions::Center);
         text->set_fontSize(20);
 
         if (!getPluginConfig().ShowText.GetValue())

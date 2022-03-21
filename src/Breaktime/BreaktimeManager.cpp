@@ -1,16 +1,29 @@
 #include "Breaktime/BreaktimeManager.hpp"
 #include "System/Action_1.hpp"
 #include "System/Func_2.hpp"
+#include "System/Threading/Tasks/Task_1.hpp"
+#include "System/Threading/Tasks/ITaskCompletionAction.hpp"
 #include "System/Collections/Generic/List_1.hpp"
 #include "System/Linq/Enumerable.hpp"
+#include "System/Collections/Generic/LinkedList_1.hpp"
 #include "GlobalNamespace/NoteData.hpp"
 #include "GlobalNamespace/BeatmapData.hpp"
 #include "GlobalNamespace/BeatmapLineData.hpp"
-#include "GlobalNamespace/BeatmapObjectType.hpp"
+#include "GlobalNamespace/IBeatmapLevel.hpp"
+#include "GlobalNamespace/IReadonlyBeatmapData.hpp"
+#include "GlobalNamespace/IPreviewBeatmapLevel.hpp"
+#include "GlobalNamespace/BeatmapDataItem.hpp"
+#include "GlobalNamespace/BeatmapEnvironmentHelper.hpp"
 #include "../include/PluginConfig.hpp"
 
+#include "questui/shared/ArrayUtil.hpp"
+
+#include "main.hpp"
+
+using namespace QuestUI;
 using namespace Breaktime;
 using namespace System;    
+using namespace custom_types;    
 
 BreaktimeManager::BreaktimeManager(IDifficultyBeatmap* map){
     Ctor(map);
@@ -22,49 +35,69 @@ BreaktimeManager::~BreaktimeManager(){
 
 void BreaktimeManager::Ctor(IDifficultyBeatmap* difficultyBeatmap){
     this->difficultyBeatmap = difficultyBeatmap;
-    this->breaks = new std::map<std::tuple<NoteLineLayer, int, float>, BeatmapObjectData*>();
+    this->breaks = new std::map<std::tuple<NoteLineLayer, int, float>, BeatmapDataItem*>();
 }
 
-bool compare(BeatmapObjectData* first, BeatmapObjectData* second){
-    return first->time < second->time;
+bool compare(BeatmapDataItem* first, BeatmapDataItem* second){
+    return first->get_time() < second->get_time();
 }
 
-void BreaktimeManager::Initialize(){
+Helpers::Coroutine BreaktimeManager::Initialize(){
     if (difficultyBeatmap)
     {
         breaks->clear();
 
-        std::vector<BeatmapObjectData*> objects = {};
-        auto lines = difficultyBeatmap->get_beatmapData()->beatmapLinesData;
+        if (model == nullptr) model = ArrayUtil::First(Resources::FindObjectsOfTypeAll<BeatmapLevelsModel*>());
 
-        for (int i = 0; i < lines->get_Length(); i++){
-            auto line = lines->get(i);
-            for (int n = 0; n < line->beatmapObjectsData->get_Count(); n++){
-                BeatmapObjectData* objectData = line->beatmapObjectsData->get_Item(n);
-                if (objectData->get_beatmapObjectType().value == BeatmapObjectType::Note)
-                {
-                    objects.push_back(objectData);
-                }
+        IPreviewBeatmapLevel* level = reinterpret_cast<GlobalNamespace::IPreviewBeatmapLevel*>(difficultyBeatmap->get_level());
+
+        std::vector<BeatmapDataItem*> objects = {};
+        
+        //getLogger().info("%s", static_cast<std::string>(id).c_str());
+
+        auto envInfo = level->get_environmentInfo();
+        auto task = difficultyBeatmap->GetBeatmapDataAsync(envInfo);
+
+        while (!task->get_IsCompleted()) co_yield nullptr;
+
+        auto data = task->get_ResultOnSuccess();
+
+        getLogger().info("[Breaktime] lets go %p", data->get_allBeatmapDataItems());
+
+        ArrayW<BeatmapDataItem*> lines = ::Array<BeatmapDataItem*>::NewLength
+            (data->get_allBeatmapDataItems()->get_Count());
+
+        data->get_allBeatmapDataItems()->CopyTo(lines, 0);
+
+        getLogger().info("[Breaktime] lets go 1.5");
+        
+        for (int i = 0; i < lines.Length(); i++){
+            getLogger().info("[Breaktime] lets go 2");
+            auto objectData = lines->get(i);
+            if (objectData->klass == il2cpp_utils::GetClassFromName("", "NoteData"))
+            {
+                getLogger().info("[Breaktime] lets go 3");
+                objects.push_back(objectData);
             }
         }
         
         std::sort(objects.begin(), objects.end(), compare);
 
-
         for (int i = 0; i < objects.size() - 1; i++){
             auto first = reinterpret_cast<NoteData*>(objects[i]);
-            BeatmapObjectData* second = objects[i + 1];
+            auto second = objects[i + 1];
 
-            if (second->time - first->time > getPluginConfig().minTime.GetValue())
+            if (second->get_time() - first->get_time() > getPluginConfig().minTime.GetValue())
             {
-                breaks->insert({std::make_tuple(first->noteLineLayer, first->lineIndex, first->time), second});
+                breaks->insert({std::make_tuple(first->get_noteLineLayer(), first->get_lineIndex(), first->get_time()), second});
             }
         }
 
-        for (std::pair<std::tuple<GlobalNamespace::NoteLineLayer, int, float>, GlobalNamespace::BeatmapObjectData*> pair : *breaks){
+        for (std::pair<std::tuple<GlobalNamespace::NoteLineLayer, int, float>, GlobalNamespace::BeatmapDataItem*> pair : *breaks){
             getLogger().info("Time: %.2f, Obj: %p", pair.second->get_time(), pair.second);
         }
     }
+    co_return;
 }
 
 void BreaktimeManager::NoteCut(NoteController* noteController){
@@ -72,18 +105,18 @@ void BreaktimeManager::NoteCut(NoteController* noteController){
 }
 
 void BreaktimeManager::NoteEnded(NoteController* noteController){
-    auto first = noteController->noteData;
+    auto first = noteController->dyn__noteData();
     std::tuple<GlobalNamespace::NoteLineLayer, int, float> tuple = 
-        std::make_tuple(first->get_noteLineLayer(), first->lineIndex, first->time);
+        std::make_tuple(first->get_noteLineLayer(), first->get_lineIndex(), first->get_time());
     if (breaks->contains(tuple))
     {
-        BeatmapObjectData* data = breaks->at(tuple);
+        BeatmapDataItem* data = breaks->at(tuple);
 
         if (data)
         {
             if (breakDetected)
             {
-                breakDetected(data->time);
+                breakDetected(data->get_time());
             }
         }
     }

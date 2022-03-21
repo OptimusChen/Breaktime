@@ -1,11 +1,17 @@
 #include "main.hpp"
 
+#include "UnityEngine/SceneManagement/SceneManager.hpp"
+#include "UnityEngine/SceneManagement/Scene.hpp"
+#include "GlobalNamespace/ObstacleData.hpp"
+#include "GlobalNamespace/ObstacleController.hpp"
 #include "GlobalNamespace/NoteController.hpp"
 #include "GlobalNamespace/NoteData.hpp"
 #include "GlobalNamespace/ScoreController.hpp"
 #include "GlobalNamespace/AudioTimeSyncController.hpp"
 #include "GlobalNamespace/BeatmapObjectManager.hpp"
 #include "GlobalNamespace/StandardLevelScenesTransitionSetupDataSO.hpp"
+#include "GlobalNamespace/SharedCoroutineStarter.hpp"
+#include "GlobalNamespace/MainMenuViewController.hpp" 
 #include "GlobalNamespace/IDifficultyBeatmap.hpp"
 #include "GlobalNamespace/StandardLevelDetailView.hpp"
 #include "GlobalNamespace/MenuTransitionsHelper.hpp"
@@ -17,6 +23,7 @@
 #include "PluginConfig.hpp"
 
 using namespace Breaktime;
+using namespace UnityEngine;
 
 GameObject* obj = nullptr;
 std::shared_ptr<BreaktimeManager> manager;
@@ -76,7 +83,7 @@ MAKE_HOOK_MATCH(AudioTimeSyncController_StartSong, &AudioTimeSyncController::Sta
 
     getLogger().info("Created new Module");
     
-    manager->Initialize();  
+    SharedCoroutineStarter::get_instance()->StartCoroutine(Helpers::CoroutineHelper::New(manager->Initialize()));  
     getLogger().info("Initialize Manager");
   }
 
@@ -92,7 +99,7 @@ MAKE_HOOK_MATCH(StandardLevelDetailView_RefreshContent, &StandardLevelDetailView
 
   if (!self) return;
 
-  map = self->selectedDifficultyBeatmap;
+  map = self->dyn__selectedDifficultyBeatmap();
 }
 
 MAKE_HOOK_MATCH(MenuTransitionsHelper_RestartGame, 
@@ -109,6 +116,14 @@ MAKE_HOOK_MATCH(MenuTransitionsHelper_RestartGame,
   }
 
   MenuTransitionsHelper_RestartGame(self, finishCallback);
+}
+
+MAKE_HOOK_MATCH(ObstacleController_Init, &ObstacleController::Init, void, ObstacleController *self,
+                ObstacleData *normalObstacleData, float worldRotation, Vector3 startPos,
+                Vector3 midPos, Vector3 endPos, float move1Duration, float move2Duration,
+                float singleLineWidth, float height) {
+    ObstacleController_Init(self, normalObstacleData, worldRotation, startPos, midPos, endPos,
+                            move1Duration, move2Duration, singleLineWidth, height);
 }
 
 void Breaktime::Hooks::BreaktimeHooks(){
