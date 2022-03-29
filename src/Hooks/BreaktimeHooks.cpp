@@ -66,6 +66,13 @@ MAKE_HOOK_MATCH(AudioTimeSyncController_StartSong, &AudioTimeSyncController::Sta
   getLogger().info("Destroyed Manager");
 
   Object::Destroy(obj);
+
+  if (breaktime){  
+    Object::Destroy(breaktime->image);
+    Object::Destroy(breaktime->screen);
+    Object::Destroy(breaktime->text);
+  }
+
   Object::Destroy(breaktime);
   getLogger().info("Destroyed Objects");
 

@@ -9,6 +9,7 @@
 #include "UnityEngine/RenderTextureDescriptor.hpp"
 #include "UnityEngine/RenderTexture.hpp"
 #include "UnityEngine/AudioType.hpp"
+#include "UnityEngine/WaitForSeconds.hpp"
 #include "UnityEngine/Networking/DownloadHandlerAudioClip.hpp"
 #include "UnityEngine/Networking/UnityWebRequest.hpp"
 #include "UnityEngine/Networking/UnityWebRequestMultimedia.hpp"
@@ -32,6 +33,9 @@ namespace Breaktime {
         this->audioController = audioController;
         this->audioSource = get_gameObject()->AddComponent<AudioSource*>();
         get_gameObject()->SetActive(true);
+
+        CreateScreen();
+        screen->set_active(false);
     }
 
     Helpers::Coroutine BreaktimeModule::StartBreak(float time){
@@ -66,17 +70,48 @@ namespace Breaktime {
             breakHappening = true;
             auto endPoint = timeUnitlEnd + audioController->dyn__songTime();
             get_gameObject()->SetActive(true);
-            screen->get_gameObject()->SetActive(true);
             SetupVisuals(assets);
             getLogger().info("Setup Visuals");
             audioController->StartCoroutine(Helpers::CoroutineHelper::New(UpdateText(endPoint)));
             ModifyVisuals();
             getLogger().info("Colored Icons");
+            screen->get_gameObject()->SetActive(true);
+
+            if (getPluginConfig().FadeOut.GetValue()){
+                getLogger().info("%s", string_format("%f", image->get_color().a).c_str());
+                float o = 0.0f;
+                while (image->get_color().a < getPluginConfig().ImageOpacity.GetValue()) {
+                    co_yield nullptr;
+                    Color color = getPluginConfig().ImageColor.GetValue();
+                    image->set_color(Color(color.r, color.g, color.b, 
+                        0.0f + o));
+                    Color color1 = getPluginConfig().TextColor.GetValue();
+                    text->set_color(Color(color1.r, color1.g, color1.b, 0.0f + o));
+                    o = o + 0.025f;
+                    getLogger().info("%s", string_format("%f", image->get_color().a).c_str());
+                }
+            }
+            
             while (!(audioController->dyn__songTime() > endPoint - 2))
             {
                 co_yield nullptr;
             }
-            screen->get_transform()->set_localPosition(Vector3(0, 1.5f, 4.0f));
+            
+            if (getPluginConfig().FadeOut.GetValue()){
+                getLogger().info("%s", string_format("%f", image->get_color().a).c_str());
+                float o = 0.0f;
+                while (image->get_color().a > 0.0f) {
+                    co_yield nullptr;
+                    Color color = getPluginConfig().ImageColor.GetValue();
+                    image->set_color(Color(color.r, color.g, color.b, 
+                        getPluginConfig().ImageOpacity.GetValue() - o));
+                    Color color1 = getPluginConfig().TextColor.GetValue();
+                    text->set_color(Color(color1.r, color1.g, color1.b, 1.0f - o));
+                    o = o + 0.025f;
+                    getLogger().info("%s", string_format("%f", image->get_color().a).c_str());
+                }
+            }
+
             screen->get_gameObject()->SetActive(false);
             breakHappening = false;
             getLogger().info("Break Finished");
@@ -88,13 +123,27 @@ namespace Breaktime {
         if (image)
         {
             Color color = getPluginConfig().ImageColor.GetValue();
-            image->set_color(Color(color.r, color.g, color.b, 
-                getPluginConfig().ImageOpacity.GetValue()));
+
+            if (getPluginConfig().FadeOut.GetValue()){
+                image->set_color(Color(color.r, color.g, color.b, 
+                    0.0f));
+            }else{
+                image->set_color(Color(color.r, color.g, color.b, 
+                    getPluginConfig().ImageOpacity.GetValue()));
+            }
         }
 
         if (text)
         {
-            text->set_color(getPluginConfig().TextColor.GetValue());
+            Color color = getPluginConfig().TextColor.GetValue();
+            
+            if (getPluginConfig().FadeOut.GetValue()){
+                text->set_color(Color(color.r, color.g, color.b, 
+                    0.0f));
+            }else{
+                text->set_color(Color(color.r, color.g, color.b, 
+                    1.0f));
+            }
         }
     }
 
@@ -145,8 +194,12 @@ namespace Breaktime {
             image = BeatSaberUI::CreateImage(vertical->get_transform(), sprite,
                 {0, 0}, {0.0f, 0.0f});
 
+            if (round(getPluginConfig().ScaleX.GetValue()) == 
+            round(getPluginConfig().ScaleY.GetValue())){
+                image->set_preserveAspect(true);
+            }
+
             UI::LayoutElement* elem = image->GetComponent<UI::LayoutElement*>();
-            image->set_preserveAspect(true);
             elem->set_preferredHeight(50.0f * getPluginConfig().ScaleY.GetValue());
             elem->set_preferredWidth(70.0f * getPluginConfig().ScaleX.GetValue());
 

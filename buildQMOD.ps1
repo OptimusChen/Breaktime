@@ -46,6 +46,9 @@ if ((-not ($cover -eq "./")) -and (Test-Path $cover))
     $filelist += ,$cover
 }
 
+$filelist += "./check.png"
+$filelist += "./sound.ogg"
+
 foreach ($mod in $modJson.modFiles)
 {
     $path = "./build/" + $mod

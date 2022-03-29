@@ -15,6 +15,7 @@ DECLARE_CONFIG(PluginConfig,
                CONFIG_VALUE(ImageOpacity, float, "Image Opacity", 1.0f);
                CONFIG_VALUE(ScaleX, float, "Image ScaleX", 1.0f);
                CONFIG_VALUE(ScaleY, float, "Image ScaleY", 1.0f);
+               CONFIG_VALUE(FadeOut, bool, "Fade Out", true);
                CONFIG_VALUE(TextColor, Color, "Text Color", Color(1, 1, 1, 1));
                CONFIG_VALUE(ImageColor, Color, "Image Color", Color(1, 1, 1, 1));
                CONFIG_VALUE(ImagePath, std::string, "Image Path", "/sdcard/ModData/com.beatgames.beatsaber/Mods/BreakTime/Icons/check.png");
@@ -29,4 +30,5 @@ DECLARE_CONFIG(PluginConfig,
                                     CONFIG_INIT_VALUE(ImagePath);
                                     CONFIG_INIT_VALUE(SoundPath);
                                     CONFIG_INIT_VALUE(ScaleX);
-                                    CONFIG_INIT_VALUE(ScaleY);))
+                                    CONFIG_INIT_VALUE(ScaleY);
+                                    CONFIG_INIT_VALUE(FadeOut);))

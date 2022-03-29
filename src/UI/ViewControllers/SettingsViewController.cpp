@@ -33,11 +33,11 @@ namespace Breaktime::UI {
             [](float f){ getPluginConfig().ImageOpacity.SetValue(f); });
             
             BeatSaberUI::CreateIncrementSetting(container->get_transform(), "Image ScaleX", 1, 0.1f, 
-            getPluginConfig().ImageOpacity.GetValue(), true, false, 0.0f, 1.0f, {0, 0}, 
+            getPluginConfig().ScaleX.GetValue(), true, false, 0.0f, 1.0f, {0, 0}, 
             [](float f){ getPluginConfig().ScaleX.SetValue(f); });
             
             BeatSaberUI::CreateIncrementSetting(container->get_transform(), "Image ScaleY", 1, 0.1f, 
-            getPluginConfig().ImageOpacity.GetValue(), true, false, 0.0f, 1.0f, {0, 0}, 
+            getPluginConfig().ScaleY.GetValue(), true, false, 0.0f, 1.0f, {0, 0}, 
             [](float f){ getPluginConfig().ScaleY.SetValue(f); });
 
             BeatSaberUI::CreateToggle(container->get_transform(), "Mod Enabled", getPluginConfig().Enabled.GetValue(), 
@@ -49,16 +49,25 @@ namespace Breaktime::UI {
             BeatSaberUI::CreateToggle(container->get_transform(), "Play Sound", getPluginConfig().SoundEnabled.GetValue(), 
             [](bool b){ getPluginConfig().SoundEnabled.SetValue(b); });
 
+            BeatSaberUI::CreateToggle(container->get_transform(), "Fade Out", getPluginConfig().FadeOut.GetValue(), 
+            [](bool b){ getPluginConfig().FadeOut.SetValue(b); });
+
             BeatSaberUI::CreateColorPicker(container->get_transform(), "Image Color", getPluginConfig().ImageColor.GetValue(), 
             [](Color color, GlobalNamespace::ColorChangeUIEventType){ getPluginConfig().ImageColor.SetValue(color); });
 
             BeatSaberUI::CreateColorPicker(container->get_transform(), "Text Color", getPluginConfig().TextColor.GetValue(), 
             [](Color color, GlobalNamespace::ColorChangeUIEventType){ getPluginConfig().TextColor.SetValue(color); });
 
-            Button* testButton = BeatSaberUI::CreateUIButton(container->get_transform(), "TEST", "PlayButton", [](){
+            Button* testButton = BeatSaberUI::CreateUIButton(container->get_transform(), "TEST", "PlayButton", [&](){
                 BreaktimeDummy* dummy = new BreaktimeDummy();
                 dummy->SpawnDummy();
             });
         }
     }
+
+    void SettingsViewController::DidDeactivate(bool removedFromHierarchy, bool screenSystemDisabling)
+    {
+        
+    }
+    
 }

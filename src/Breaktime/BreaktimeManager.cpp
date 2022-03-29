@@ -30,6 +30,7 @@ BreaktimeManager::BreaktimeManager(IDifficultyBeatmap* map){
 }
 
 BreaktimeManager::~BreaktimeManager(){
+    delete breaks;
     getLogger().info("BreaktimeManager Destroyed.");
 }
 
@@ -53,8 +54,6 @@ Helpers::Coroutine BreaktimeManager::Initialize(){
 
         std::vector<BeatmapDataItem*> objects = {};
         
-        //getLogger().info("%s", static_cast<std::string>(id).c_str());
-
         auto envInfo = level->get_environmentInfo();
         auto task = difficultyBeatmap->GetBeatmapDataAsync(envInfo);
 
@@ -105,9 +104,12 @@ void BreaktimeManager::NoteCut(NoteController* noteController){
 }
 
 void BreaktimeManager::NoteEnded(NoteController* noteController){
+    if (!noteController) return;
     auto first = noteController->dyn__noteData();
+    if (!first) return;
     std::tuple<GlobalNamespace::NoteLineLayer, int, float> tuple = 
         std::make_tuple(first->get_noteLineLayer(), first->get_lineIndex(), first->get_time());
+    if (!breaks) return;
     if (breaks->contains(tuple))
     {
         BeatmapDataItem* data = breaks->at(tuple);
