@@ -55,7 +55,7 @@ Helpers::Coroutine BreaktimeManager::Initialize(){
         std::vector<BeatmapDataItem*> objects = {};
         
         auto envInfo = level->get_environmentInfo();
-        auto task = difficultyBeatmap->GetBeatmapDataAsync(envInfo);
+        auto task = difficultyBeatmap->GetBeatmapDataAsync(envInfo, nullptr);
 
         while (!task->get_IsCompleted()) co_yield nullptr;
 
